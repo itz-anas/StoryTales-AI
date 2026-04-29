@@ -1,0 +1,23 @@
+{
+  "name": "ai-ebook-creator-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^1.2.18",
+    "@libsql/client": "^0.17.3",
+    "ai": "^4.3.16",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/bun": "^1.2.0"
+  }
+}

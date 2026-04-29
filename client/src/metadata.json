@@ -1,0 +1,5 @@
+{
+  "name": "AIBookSmith",
+  "description": "An intelligent ebook creator that generates outlines, writes chapters, and creates cover art using Gemini AI.",
+  "requestFramePermissions": []
+}
