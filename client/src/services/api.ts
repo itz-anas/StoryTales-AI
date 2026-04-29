@@ -1,6 +1,9 @@
 import type { Book, Chapter, WizardFormData } from '../types';
 
-const API_BASE = '/api';
+// Uses VITE_API_URL env variable in production, falls back to /api for local dev
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
 
 export async function getBooks(): Promise<Omit<Book, 'chapters'>[]> {
   const response = await fetch(`${API_BASE}/books`);
@@ -43,7 +46,6 @@ export async function generateChapterContent(
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-
     const chunk = decoder.decode(value);
     onChunk(chunk);
   }
