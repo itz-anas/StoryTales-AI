@@ -1,5 +1,5 @@
 [build]
-buildCommand = "cd client && npm install && npm run build"
+buildCommand = "cd client && npm install && npm run build && cd ../server && npm install"
 
 [deploy]
-startCommand = "cd server && bun install && bun run src/index.ts"
+startCommand = "cd server && bun run src/index.ts"
