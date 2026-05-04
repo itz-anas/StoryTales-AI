@@ -338,6 +338,3 @@ MIT License — feel free to use this project for your own AI-powered applicatio
 
 ---
 
-<div align="center">
-  Made with ❤️ using AI
-</div>
