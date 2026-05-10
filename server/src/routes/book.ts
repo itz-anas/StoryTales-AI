@@ -125,7 +125,6 @@ Return a list of 5-12 chapters. For each chapter, provide a title and a brief 1-
 
     await insertBook(book);
 
-    // Insert all chapters
     for (const [index, item] of object.entries()) {
       const chapterRow: Omit<ChapterRow, "content"> & { content?: string } = {
         id: crypto.randomUUID(),
@@ -141,8 +140,9 @@ Return a list of 5-12 chapters. For each chapter, provide a title and a brief 1-
     const savedChapters = await getChaptersByBookId(bookId);
     res.json(mapBookRow(book, savedChapters));
   } catch (error) {
-    console.error("Error creating book:", error);
-    res.status(500).json({ error: "Failed to create book" });
+    console.error("❌ Error creating book:", error);
+    console.error("❌ Error details:", JSON.stringify(error, null, 2));
+    res.status(500).json({ error: String(error) });
   }
 });
 
@@ -151,6 +151,8 @@ router.post("/books/:id/chapters/:chapterId/generate", async (req: Request, res:
   const { id: bookId, chapterId } = req.params;
 
   try {
+    console.log(`🔄 Generating chapter ${chapterId} for book ${bookId}`);
+
     const book = await getBookById(bookId);
     if (!book) {
       res.status(404).json({ error: "Book not found" });
@@ -180,6 +182,8 @@ Write in valid Markdown format. Use headings (##) for sections within the chapte
 Tone: Professional, engaging, and appropriate for the genre.
 Length: Approximately 800-1500 words.`;
 
+    console.log(`✅ Prompt ready, calling Gemini...`);
+
     const result = streamText({
       model: google("gemini-2.5-flash"),
       prompt,
@@ -202,12 +206,15 @@ Length: Approximately 800-1500 words.`;
 
     res.end();
 
-    // Save to Turso after streaming
+    console.log(`✅ Chapter generated successfully, saving to DB...`);
     await updateChapterContent(chapterId, fullText, true);
+    console.log(`✅ Chapter saved to DB`);
+
   } catch (error) {
-    console.error("Error generating chapter:", error);
+    console.error("❌ Generate route crashed:", error);
+    console.error("❌ Error details:", JSON.stringify(error, null, 2));
     if (!res.headersSent) {
-      res.status(500).json({ error: "Failed to generate chapter" });
+      res.status(500).json({ error: String(error) });
     } else {
       res.end();
     }
