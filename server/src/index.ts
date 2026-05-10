@@ -6,7 +6,21 @@ import { initDb } from "./db.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    if (
+      !origin ||
+      origin.includes('vercel.app') ||
+      origin.includes('localhost')
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json({ limit: "50mb" }));
 
 app.use("/api", bookRouter);
