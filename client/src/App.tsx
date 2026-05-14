@@ -5,39 +5,28 @@ import { Wizard } from './components/Wizard';
 import { Editor } from './components/Editor';
 import { Preview } from './components/Preview';
 import {
-  getBooks,
-  getBook,
-  createBook,
-  generateChapterContent,
-  updateChapter,
-  updateBookCover,
-  addChapter,
-  deleteBook,
-  deleteChapter as deleteChapterApi,
+  getBooks, getBook, createBook, generateChapterContent,
+  updateChapter, updateBookCover, addChapter,
+  deleteBook, deleteChapter as deleteChapterApi,
 } from './services/api';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<ViewState>('dashboard');
-  const [books, setBooks] = useState<Omit<Book, 'chapters'>[]>([]);
-  const [activeBook, setActiveBook] = useState<Book | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [view, setView]               = useState<ViewState>('dashboard');
+  const [books, setBooks]             = useState<Omit<Book, 'chapters'>[]>([]);
+  const [activeBook, setActiveBook]   = useState<Book | null>(null);
+  const [isLoading, setIsLoading]     = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDark, setIsDark]           = useState(false);
 
-  // Load books on mount
-  useEffect(() => {
-    loadBooks();
-  }, []);
+  const toggleTheme = () => setIsDark(p => !p);
+
+  useEffect(() => { loadBooks(); }, []);
 
   const loadBooks = async () => {
     setIsLoading(true);
-    try {
-      const data = await getBooks();
-      setBooks(data);
-    } catch (error) {
-      console.error("Failed to load books:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    try { setBooks(await getBooks()); }
+    catch (e) { console.error('Failed to load books:', e); }
+    finally { setIsLoading(false); }
   };
 
   const handleCreateBook = async (data: WizardFormData) => {
@@ -47,110 +36,67 @@ const App: React.FC = () => {
       setBooks(prev => [{ ...newBook, chapters: [] }, ...prev]);
       setActiveBook(newBook);
       setView('editor');
-    } catch (error) {
-      console.error("Error creating book", error);
-      alert("Failed to generate outline. Please try again.");
-    } finally {
-      setIsGenerating(false);
-    }
+    } catch (e) {
+      console.error('Error creating book', e);
+      alert('Failed to generate outline. Please try again.');
+    } finally { setIsGenerating(false); }
   };
 
   const handleGenerateChapter = async (chapterId: string) => {
     if (!activeBook) return;
-
+    setActiveBook(prev => !prev ? prev : {
+      ...prev,
+      chapters: prev.chapters.map(c =>
+        c.id === chapterId ? { ...c, isGenerating: true, content: '' } : c
+      ),
+    });
+    let accumulated = '';
     try {
-      // Update local state to show generating
-      setActiveBook(prev => {
-        if (!prev) return prev;
-        return {
+      await generateChapterContent(activeBook.id, chapterId, (chunk) => {
+        accumulated += chunk;
+        setActiveBook(prev => !prev ? prev : {
           ...prev,
           chapters: prev.chapters.map(c =>
-            c.id === chapterId
-              ? { ...c, isGenerating: true, content: '' }
-              : c
+            c.id === chapterId ? { ...c, content: accumulated } : c
           ),
-        };
-      });
-
-      let accumulatedContent = '';
-
-      await generateChapterContent(activeBook.id, chapterId, (chunk) => {
-        accumulatedContent += chunk;
-        setActiveBook(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            chapters: prev.chapters.map(c =>
-              c.id === chapterId
-                ? { ...c, content: accumulatedContent }
-                : c
-            ),
-          };
         });
       });
-
-      // Mark as complete
-      setActiveBook(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          chapters: prev.chapters.map(c =>
-            c.id === chapterId
-              ? { ...c, isGenerating: false, isComplete: true }
-              : c
-          ),
-        };
+      setActiveBook(prev => !prev ? prev : {
+        ...prev,
+        chapters: prev.chapters.map(c =>
+          c.id === chapterId ? { ...c, isGenerating: false, isComplete: true } : c
+        ),
       });
-    } catch (error) {
-      console.error("Error generating chapter", error);
-      alert("Failed to generate chapter content.");
-      // Revert generating state
-      setActiveBook(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          chapters: prev.chapters.map(c =>
-            c.id === chapterId
-              ? { ...c, isGenerating: false }
-              : c
-          ),
-        };
+    } catch (e) {
+      console.error('Error generating chapter', e);
+      alert('Failed to generate chapter content.');
+      setActiveBook(prev => !prev ? prev : {
+        ...prev,
+        chapters: prev.chapters.map(c =>
+          c.id === chapterId ? { ...c, isGenerating: false } : c
+        ),
       });
     }
   };
 
   const handleUpdateChapter = async (chapterId: string, content: string) => {
     if (!activeBook) return;
-
     try {
       await updateChapter(activeBook.id, chapterId, content);
-      setActiveBook(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          chapters: prev.chapters.map(c =>
-            c.id === chapterId ? { ...c, content } : c
-          ),
-        };
+      setActiveBook(prev => !prev ? prev : {
+        ...prev,
+        chapters: prev.chapters.map(c => c.id === chapterId ? { ...c, content } : c),
       });
-    } catch (error) {
-      console.error("Failed to update chapter:", error);
-    }
+    } catch (e) { console.error('Failed to update chapter:', e); }
   };
 
   const handleDeleteBook = async (bookId: string) => {
-    if (window.confirm("Are you sure you want to delete this book?")) {
-      try {
-        await deleteBook(bookId);
-        setBooks(prev => prev.filter(b => b.id !== bookId));
-        if (activeBook?.id === bookId) {
-          setActiveBook(null);
-          setView('dashboard');
-        }
-      } catch (error) {
-        console.error("Failed to delete book:", error);
-      }
-    }
+    if (!window.confirm('Are you sure you want to delete this book?')) return;
+    try {
+      await deleteBook(bookId);
+      setBooks(prev => prev.filter(b => b.id !== bookId));
+      if (activeBook?.id === bookId) { setActiveBook(null); setView('dashboard'); }
+    } catch (e) { console.error('Failed to delete book:', e); }
   };
 
   const handleUpdateBookCover = async (coverImage: string) => {
@@ -158,43 +104,27 @@ const App: React.FC = () => {
     try {
       await updateBookCover(activeBook.id, coverImage);
       setActiveBook(prev => prev ? { ...prev, coverImage } : prev);
-    } catch (error) {
-      console.error("Failed to update cover:", error);
-    }
+    } catch (e) { console.error('Failed to update cover:', e); }
   };
 
   const handleAddChapter = async (title: string) => {
     if (!activeBook) return;
     try {
-      const newChapter = await addChapter(activeBook.id, title);
-      setActiveBook(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          chapters: [...prev.chapters, newChapter],
-        };
-      });
-    } catch (error) {
-      console.error("Failed to add chapter:", error);
-    }
+      const ch = await addChapter(activeBook.id, title);
+      setActiveBook(prev => !prev ? prev : { ...prev, chapters: [...prev.chapters, ch] });
+    } catch (e) { console.error('Failed to add chapter:', e); }
   };
 
   const handleDeleteChapter = async (chapterId: string) => {
     if (!activeBook) return;
-    if (window.confirm("Are you sure you want to delete this chapter?")) {
-      try {
-        await deleteChapterApi(activeBook.id, chapterId);
-        setActiveBook(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            chapters: prev.chapters.filter(c => c.id !== chapterId),
-          };
-        });
-      } catch (error) {
-        console.error("Failed to delete chapter:", error);
-      }
-    }
+    if (!window.confirm('Are you sure you want to delete this chapter?')) return;
+    try {
+      await deleteChapterApi(activeBook.id, chapterId);
+      setActiveBook(prev => !prev ? prev : {
+        ...prev,
+        chapters: prev.chapters.filter(c => c.id !== chapterId),
+      });
+    } catch (e) { console.error('Failed to delete chapter:', e); }
   };
 
   const handleOpenBook = async (bookId: string) => {
@@ -203,20 +133,28 @@ const App: React.FC = () => {
       const book = await getBook(bookId);
       setActiveBook(book);
       setView('editor');
-    } catch (error) {
-      console.error("Failed to load book:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e) { console.error('Failed to load book:', e); }
+    finally { setIsLoading(false); }
   };
 
+  const T = isDark
+    ? { bg: '#111010', card: '#1a1818', text: '#f0ece6', accent: '#f0a030' }
+    : { bg: '#f2f5f7', card: '#ffffff', text: '#1a2530', accent: '#1a8a8a' };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={{ background: T.bg, color: T.text }}>
+
+      {/* Loading Overlay */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-center mt-4 text-slate-700 dark:text-slate-300">Loading...</p>
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <div className="p-8 rounded-2xl flex flex-col items-center gap-4 shadow-2xl"
+            style={{ background: T.card, border: `1px solid ${isDark ? '#2a2520' : '#ccd8e0'}` }}>
+            <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: T.accent, borderTopColor: 'transparent' }} />
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: T.accent }}>
+              Loading...
+            </p>
           </div>
         </div>
       )}
@@ -227,6 +165,8 @@ const App: React.FC = () => {
           onNewBook={() => setView('wizard')}
           onOpenBook={handleOpenBook}
           onDeleteBook={handleDeleteBook}
+          isDark={isDark}
+          toggleTheme={toggleTheme}
         />
       )}
 
@@ -235,6 +175,8 @@ const App: React.FC = () => {
           onCancel={() => setView('dashboard')}
           onSubmit={handleCreateBook}
           isGenerating={isGenerating}
+          isDark={isDark}
+          toggleTheme={toggleTheme}
         />
       )}
 
@@ -248,6 +190,8 @@ const App: React.FC = () => {
           onPreview={() => setView('preview')}
           onAddChapter={handleAddChapter}
           onDeleteChapter={handleDeleteChapter}
+          isDark={isDark}
+          toggleTheme={toggleTheme}
         />
       )}
 
@@ -255,6 +199,8 @@ const App: React.FC = () => {
         <Preview
           book={activeBook}
           onClose={() => setView('editor')}
+          isDark={isDark}
+          toggleTheme={toggleTheme}
         />
       )}
     </div>

@@ -49,15 +49,23 @@ function mapBookRow(book: BookRow, chapters: ChapterRow[]) {
 router.get("/books", async (_req: Request, res: Response) => {
   try {
     const books = await getAllBooks();
-    const result = books.map((b) => ({
-      id: b.id,
-      title: b.title,
-      genre: b.genre,
-      targetAudience: b.target_audience,
-      description: b.description,
-      coverImage: b.cover_image,
-      createdAt: b.created_at,
-    }));
+    const result = await Promise.all(
+      books.map(async (b) => {
+        const chapters = await getChaptersByBookId(b.id);
+        const completed = chapters.filter(c => c.is_complete === 1).length;
+        return {
+          id: b.id,
+          title: b.title,
+          genre: b.genre,
+          targetAudience: b.target_audience,
+          description: b.description,
+          coverImage: b.cover_image,
+          createdAt: b.created_at,
+          chapterCount: chapters.length,
+          completedChapterCount: completed,
+        };
+      })
+    );
     res.json(result);
   } catch (error) {
     console.error("Error fetching books:", error);
@@ -106,8 +114,10 @@ Description: ${description}
 
 Return a list of 5-12 chapters. For each chapter, provide a title and a brief 1-sentence description of what happens or is discussed in that chapter.`;
 
+
+//change the model here 
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-flash"),               //change the model here 
       schema: outlineSchema,
       prompt,
     });
@@ -184,8 +194,11 @@ Length: Approximately 800-1500 words.`;
 
     console.log(`✅ Prompt ready, calling Gemini...`);
 
+
+
+    //change the model here 
     const result = streamText({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-flash"),          //change the model here 
       prompt,
     });
 

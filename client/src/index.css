@@ -3,28 +3,45 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    border-color: hsl(var(--border) | 214.3 31.8% 91.4%);
-  }
-  body {
-    @apply bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100;
-  }
+  * { border-color: hsl(var(--border) | 214.3 31.8% 91.4%); }
+  body { @apply bg-[#f2f5f7] text-[#1a2530]; }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* ── Scrollbar ─────────────────────────── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #b0c8d8; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #1a8a8a; }
 
-::-webkit-scrollbar-track {
-  @apply bg-slate-100 dark:bg-slate-800;
-}
+/* ── Text selection ────────────────────── */
+::selection { background: #1a8a8a; color: #fff; }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+/* ── Sketch SVG fade-in ────────────────── */
+@keyframes fadeInSketch {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
+.sketch-bg-svg { animation: fadeInSketch 1.4s ease-out forwards; }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-slate-500;
+/* ── Gold pulse (video in-progress) ───── */
+@keyframes gold-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(240,160,48,0.3); }
+  50%      { box-shadow: 0 0 0 5px rgba(240,160,48,0); }
 }
+.gold-pulse { animation: gold-pulse 1.8s ease-in-out infinite; }
+
+/* ── Teal pulse (light video btn) ──────── */
+@keyframes teal-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(26,138,138,0.3); }
+  50%      { box-shadow: 0 0 0 5px rgba(26,138,138,0); }
+}
+.teal-pulse { animation: teal-pulse 1.8s ease-in-out infinite; }
+
+/* ── Card hover lift ───────────────────── */
+.book-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.book-card:hover { transform: translateY(-4px); }
+
+/* ── Prose inside Editor ───────────────── */
+.prose h1, .prose h2, .prose h3 { font-family: Georgia, serif; font-weight: 700; }
+.prose p { line-height: 2; }
+
