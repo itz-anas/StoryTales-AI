@@ -11,6 +11,7 @@ app.use(cors({
     if (
       !origin ||
       origin.includes('vercel.app') ||
+      origin.includes('storytalesai') ||
       origin.includes('localhost')
     ) {
       callback(null, true);
